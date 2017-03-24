@@ -9,6 +9,7 @@ ouput
 hotel_codes*
 *.db
 config.py
+create_tbl
 
 # Byte-compiled / optimized / DLL files
 __pycache__/
