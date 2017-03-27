@@ -16,7 +16,11 @@ import pprint
 import json
 import datetime
 
-with open('secrets.json') as data_file:    
+import os
+# pprint.pprint(os.path.dirname(os.path.abspath(__file__)))
+# pprint.pprint(__file__)
+# with open('secrets.json') as data_file:    
+with open(os.path.join(os.path.dirname(os.path.abspath(__file__)), 'secrets.json')) as data_file:    
 	app.config['AUTHORIZED_TOKENS'] = (json.load(data_file))['AUTHORIZED_TOKENS']
 	# pprint.pprint(app.config['AUTHORIZED_TOKENS'])
 
