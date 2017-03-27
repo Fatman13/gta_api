@@ -10,6 +10,7 @@ hotel_codes*
 *.db
 config.py
 create_tbl
+secrets.json
 
 # Byte-compiled / optimized / DLL files
 __pycache__/

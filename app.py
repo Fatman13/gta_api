@@ -1,4 +1,12 @@
-from flask import Flask, jsonify, request
+#!/usr/bin/env python
+# coding=utf-8
+
+import sys
+if sys.version_info.major == 2:
+	reload(sys)
+	sys.setdefaultencoding('utf-8')
+
+from flask import Flask, jsonify, request, abort
 from flask_sqlalchemy import SQLAlchemy
 
 app = Flask(__name__)
@@ -8,23 +16,18 @@ import pprint
 import json
 import datetime
 
-import re
-from sqlalchemy.dialects.sqlite import DATE
-from sqlalchemy import cast
+with open('secrets.json') as data_file:    
+	app.config['AUTHORIZED_TOKENS'] = (json.load(data_file))['AUTHORIZED_TOKENS']
+	# pprint.pprint(app.config['AUTHORIZED_TOKENS'])
 
-d = DATE(
-		storage_format="%(year)04d/%(month)02d/%(day)02d",
-		regexp=re.compile("(?P<year>\d+)/(?P<month>\d+)/(?P<day>\d+)")
-	)
+app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///destServ.db'
+db = SQLAlchemy(app)
 
 def row2dict(tbl, row):
 	d = {}
 	for column in tbl.columns:
 		d[column.name] = str(getattr(row, column.name))
 	return d
-
-app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///destServ.db'
-db = SQLAlchemy(app)
 
 class DestinationService(db.Model):
 	id = db.Column(db.Integer, primary_key=True)
@@ -37,12 +40,12 @@ class DestinationService(db.Model):
 	item_code = db.Column(db.String())
 	duration = db.Column(db.String())
 	language = db.Column(db.String())
-	# dates_from = db.Column(db.String())
+	dates_from = db.Column(db.String())
 	# dates_from = db.Column(db.DateTime)
-	dates_from = db.Column(d)
-	# dates_to = db.Column(db.String())
+	# dates_from = db.Column(d)
+	dates_to = db.Column(db.String())
 	# dates_to = db.Column(db.DateTime)
-	dates_to = db.Column(d)
+	# dates_to = db.Column(d)
 	days = db.Column(db.String())
 	min = db.Column(db.String())
 	conditions = db.Column(db.String())
@@ -92,7 +95,26 @@ class DestinationService(db.Model):
 		# return "<DS %r %r %r>" % self.id, 'c: ' + self.city_code + '_' + self.item_code, 'n: ' + self.item_name
 		return "<DS id: {0} code: {1} name: {2}>".format(self.id, self.city_code + '_' + self.item_code, self.item_name)
 
+def authorized(fn):
+	def _wrap(*args, **kwargs):
+		if 'Api-Token' not in request.headers:
+			# Unauthorized
+			print("No token in header")
+			abort(401)
+			return None
+
+		print("Checking token...")
+		if request.headers.get('Api-Token') not in app.config['AUTHORIZED_TOKENS']:
+			print("Authorization FAIL!")
+			# Unauthorized
+			abort(401)
+			return None
+
+		return fn(*args, **kwargs)
+	return _wrap
+
 @app.route('/destinationServices', methods=['GET'])
+@authorized
 def ds():
 	city_code, item_code, from_d, to_d = request.args.get('cityCode'), request.args.get('itemCode'), request.args.get('fromDate'), request.args.get('toDate') 
 	# pprint.pprint('params: ' + str(city_code) + ' a ' + str(item_code) + ' a ' + str(from_d) + ' a ' + str(to_d) )
@@ -112,7 +134,10 @@ def ds():
 	for row in q.all():
 		if from_date != None and to_date != None:
 			# pprint.pprint('Row Dates: ' + str(row.dates_from) + ' ' + str(row.dates_to))
-			if row.dates_from >= from_date and row.dates_to <= to_date:
+			row_from_date = datetime.datetime.strptime(from_d, "%Y-%m-%d").date()
+			row_to_date = datetime.datetime.strptime(from_d, "%Y-%m-%d").date()
+			# if row.dates_from >= from_date and row.dates_to <= to_date:
+			if row_from_date >= from_date and row_to_date <= to_date:
 				# pprint.pprint("True?")
 				data.append(row2dict(DestinationService.__table__, row))
 			continue
@@ -124,6 +149,8 @@ def ds():
 
 	return json.dumps(res, ensure_ascii=False)
 
+if __name__ == "__main__":
+	app.run()
 
 # engine = create_engine('sqlite:///destServ.db', convert_unicode=True)
 # metadata = MetaData(bind=engine)
@@ -137,8 +164,7 @@ def ds():
 # 	# pprint.pprint(res)
 # 	return json.dumps(row2dict(services, res), ensure_ascii=False)
 
-if __name__ == "__main__":
-	app.run()
+
 
 # app.config.from_object('config')
 # db = SQLAlchemy(app)
