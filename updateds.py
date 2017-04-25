@@ -11,6 +11,7 @@ from xml.etree.ElementTree import fromstring
 import os
 import random
 from sqlalchemy import create_engine
+from sqlalchemy import text
 import copy
 import json
 
@@ -26,7 +27,8 @@ def daterange(start_date, end_date):
 
 @click.command()
 @click.option('--country', default='Canada')
-def updateds(country):
+@click.option('--client', default='ctrip')
+def updateds(country, client):
 
 	url = 'https://rbs.gta-travel.com/rbscnapi/RequestListenerServlet'
 	res = []
@@ -47,9 +49,18 @@ def updateds(country):
 	last_item_code = None
 	entry = None
 
+	reqs_rows = engine.execute("SELECT * FROM {0};".format(client))
+	reqs = set()
+	for row in reqs_rows:
+		reqs.add(row['gta_code'])
+
 	# Merge raw entries
 	for row in services_raw:
 		# pprint.pprint(row)
+
+		if client == 'ctrip':
+			if not ('#'.join([row['city_code'], row['item_code']]) in reqs):
+				continue
 
 		if not (last_city_code == row['city_code'] and last_item_code == row['item_code']):
 			entry = {}
@@ -125,9 +136,9 @@ def updateds(country):
 		else:
 			service['duration'] = ''
 		if ri_tree.find('.//TheTour') != None:
-			service['more_info'] = ri_tree.find('.//TheTour').text
+			service['the_tour'] = ri_tree.find('.//TheTour').text
 		else:
-			service['more_info'] = ''
+			service['the_tour'] = ''
 		if ri_tree.find('.//Includes') != None:
 			service['includes'] = ri_tree.find('.//Includes').text
 		else:
@@ -137,9 +148,13 @@ def updateds(country):
 		else:
 			service['please_note'] = ''
 		if ri_tree.find('.//AdditionalInformation') != None:
-			service['additonal_information'] = ''
+			service['additional_information'] = ''
+			for info in ri_tree.find('.//AdditionalInformation'):
+				service['additional_information'] += info.text + ' '
+			service['additional_information'].strip()
+
 		else:
-			service['additonal_information'] = ''
+			service['additional_information'] = ''
 
 		for op in ri_tree.find('.//TourOperations'):
 			op_ent = {}
@@ -238,14 +253,23 @@ def updateds(country):
 
 				service['currency'] = rp_tree.find('.//ItemPrice').get('Currency')
 
-				service['policy'] = ''
+				service['policy'] = []
 				for charge_condition in rp_tree.find('.//ChargeConditions'):
 					if charge_condition.get('Type') == 'cancellation':
 						for conditoin in charge_condition:
+							con_ent = {}
 							if conditoin.get('Charge') == 'true':
-								service['policy'] += 'Charge(FromDay: ' + str(conditoin.get('FromDay')) + ' ToDay: ' + str(conditoin.get('ToDay')) + ') '
+								# service['policy'] += 'Charge(FromDay: ' + str(conditoin.get('FromDay')) + ' ToDay: ' + str(conditoin.get('ToDay')) + ') '
+								con_ent['type'] = 'Charge'
+								con_ent['charge_amount'] = conditoin.get('ChargeAmount')
+								con_ent['from_day'] = conditoin.get('FromDay')
+								con_ent['to_day'] = conditoin.get('ToDay')
 							else:
-								service['policy'] += 'Free(FromDay: ' + str(conditoin.get('FromDay')) + ') '
+								# service['policy'] += 'Free(FromDay: ' + str(conditoin.get('FromDay')) + ') '
+								con_ent['type'] = 'Free'
+								con_ent['from_day'] = conditoin.get('FromDay')
+							service['policy'].append(con_ent)
+
 
 				tour_ops = rp_tree.find('.//TourOperations')
 
@@ -341,26 +365,70 @@ def updateds(country):
 		pprint.pprint(service)
 		services_p.append(service)
 
-	columns = 'country, city_code, item_code, name, duration, summary, please_note, includes, more_info, currency, policy, tour_operations'
+	columns = 'country, city_code, item_code, name, duration, summary, please_note, includes, the_tour, additional_information, currency, policy, tour_operations'
 
 	for service in services_p:
+		engine.execute("DELETE FROM destination_service WHERE city_code='{0}' AND item_code='{1}';".format(service['city_code'], service['item_code']))
+	for service in services_p:
 		if len(service['tour_operations']) != 0:
+			r = [service['country'], service['city_code'], service['item_code'], \
+				service['name'], service['duration'], service['summary'], \
+				service['please_note'], service['includes'], service['the_tour'], service['additional_information'], \
+				service['currency'], json.dumps(service['policy']), json.dumps(service['tour_operations'])]
+				# with engine.connect() as connection:
+					# connection.execute(text("INSERT INTO destination_service ({0}) VALUES({1});".format(columns, ','.join( '\'' + ent.replace('\'', '\'\'') + '\'' for ent in r))).execution_options(autocommit=True) )
+					# connection.commit()
+			engine.execute("INSERT INTO destination_service ({0}) VALUES({1});".format(columns, ','.join( '\'' + ent.replace('\'', '\'\'') + '\'' for ent in r) ))
 
-			entry = engine.execute("SELECT * FROM destination_service WHERE city_code={0} AND item_code={1};".format('\'' + service['city_code'] + '\'', '\'' + service['item_code'] + '\'') )
+	# for service in services_p:
+	# 	if len(service['tour_operations']) != 0:
 
-			if entry != None:
-				updates = []
-				for col_name in columns.split(', '):
-					updates.append(col_name + '=' + '\'' + service[col_name] + '\'')
-				update_str = ', '.join(updates)
-				engine.execute("UPDATE destination_service SET {0} WHERE city_code={1} AND item_code={2};".format(update_str, \
-					'\'' + service['city_code'] + '\'', '\'' + service['item_code'] + '\'') )
-			else:
-				r = [service['country'], service['city_code'], service['item_code'], \
-					service['name'], service['duration'], service['summary'], \
-					service['please_note'], service['includes'], service['more_info'], \
-					service['currency'], service['policy'], json.dumps(service['tour_operations'])]
-				engine.execute("INSERT INTO destination_service ({0}) VALUES({1});".format(columns, ','.join( '\'' + ent.replace('\'', '\'\'') + '\'' for ent in r) ))
+	# 		# entry = engine.execute("SELECT * FROM destination_service WHERE city_code='{0}' AND item_code='{1}';".format(service['city_code'], service['item_code']))
+
+	# 		# engine.execute("BEGIN TRANSACTION;")
+
+	# 		if entry != None:
+	# 			engine.execute("DELETE FROM destination_service WHERE city_code='{0}' AND item_code='{1}';".format(service['city_code'], service['item_code']))
+				
+	# 		r = [service['country'], service['city_code'], service['item_code'], \
+	# 			service['name'], service['duration'], service['summary'], \
+	# 			service['please_note'], service['includes'], service['more_info'], \
+	# 			service['currency'], json.dumps(service['policy']), json.dumps(service['tour_operations'])]
+	# 			# with engine.connect() as connection:
+	# 				# connection.execute(text("INSERT INTO destination_service ({0}) VALUES({1});".format(columns, ','.join( '\'' + ent.replace('\'', '\'\'') + '\'' for ent in r))).execution_options(autocommit=True) )
+	# 				# connection.commit()
+	# 		engine.execute("INSERT INTO destination_service ({0}) VALUES({1});".format(columns, ','.join( '\'' + ent.replace('\'', '\'\'') + '\'' for ent in r) ))
+
+	# 		# engine.execute("COMMIT;")
+
+
+			# engine.execute("BEGIN TRANSACTION;")
+
+			# if entry != None:
+			# 	updates = []
+			# 	for col_name in columns.split(', '):
+			# 		if col_name == 'tour_operations':
+			# 			updates.append(col_name + '=' + '\'' + json.dumps(service[col_name]) + '\'')
+			# 			continue
+			# 		updates.append(col_name + '=' + '\'' + service[col_name] + '\'')
+			# 		update_str = ', '.join(updates)
+			# 		# with engine.connect() as connection:
+			# 		# connection.execute(text("UPDATE destination_service SET {0} WHERE city_code={1} AND item_code={2};".format(update_str, \	
+			# 			# '\'' + service['city_code'] + '\'', '\'' + service['item_code'] + '\'')).execution_options(autocommit=True) )
+			# 		engine.execute(text("UPDATE destination_service SET {0} WHERE city_code={1} AND item_code={2};".format(update_str, \
+			# 			'\'' + service['city_code'] + '\'', '\'' + service['item_code'] + '\'')).execution_options(autocommit=True) )
+			# 		# connection.commit()
+			# else:
+			# 	r = [service['country'], service['city_code'], service['item_code'], \
+			# 		service['name'], service['duration'], service['summary'], \
+			# 		service['please_note'], service['includes'], service['more_info'], \
+			# 		service['currency'], json.dumps(service['policy']), json.dumps(service['tour_operations'])]
+			# 	# with engine.connect() as connection:
+			# 		# connection.execute(text("INSERT INTO destination_service ({0}) VALUES({1});".format(columns, ','.join( '\'' + ent.replace('\'', '\'\'') + '\'' for ent in r))).execution_options(autocommit=True) )
+			# 		# connection.commit()
+			# 	engine.execute("INSERT INTO destination_service ({0}) VALUES({1});".format(columns, ','.join( '\'' + ent.replace('\'', '\'\'') + '\'' for ent in r) ))
+
+			# engine.execute("COMMIT;")
 
 if __name__ == '__main__':
 	updateds()

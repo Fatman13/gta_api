@@ -94,6 +94,24 @@ def row2dict(tbl, row):
 # 	def __repr__(self):
 # 		return "<DS id: {0} code: {1} name: {2}>".format(self.id, self.city_code + '_' + self.item_code, self.item_name)
 
+class ctrip(db.Model):
+	__table_args__ = {'sqlite_autoincrement': True}
+
+	id = db.Column(db.Integer, primary_key=True)
+
+	gta_code = db.Column(db.String())
+	city = db.Column(db.String())
+	country = db.Column(db.String())
+
+	def __init__(self, gta_code, city, country):
+		self.gta_code = gta_code
+		self.city = city
+		self.country = country
+
+	def __repr__(self):
+		return "<ctrip id: {0} gta_code: {1} country: {2}>".format(self.id, self.gta_code, self.country)
+
+
 class DestinationService(db.Model):
 	__table_args__ = {'sqlite_autoincrement': True}
 
@@ -108,7 +126,8 @@ class DestinationService(db.Model):
 	summary = db.Column(db.String())
 	please_note = db.Column(db.String())	
 	includes = db.Column(db.String())
-	more_info = db.Column(db.String())
+	the_tour = db.Column(db.String())
+	additional_information = db.Column(db.String())
 
 	currency = db.Column(db.String())
 	policy = db.Column(db.String())
@@ -117,7 +136,7 @@ class DestinationService(db.Model):
 	def __init__(self, country, city_code, currency, name, item_code, duration, \
 					 please_note, \
 					 policy, \
-					 summary, includes, more_info, tour_operations):
+					 summary, includes, the_tour, additional_information, tour_operations):
 		self.country = country
 		self.city_code = city_code
 		self.currency = currency
@@ -128,11 +147,12 @@ class DestinationService(db.Model):
 		self.please_note = please_note
 		self.policy = policy
 		self.includes = includes
-		self.more_info = more_info
+		self.the_tour = the_tour
+		self.additional_information = additional_information
 		self.tour_operations = tour_operations
 
 	def __repr__(self):
-		return "<DS_raw id: {0} code: {1} name: {2}>".format(self.id, self.city_code + '_' + self.item_code, self.name)
+		return "<DS id: {0} code: {1} name: {2}>".format(self.id, self.city_code + '_' + self.item_code, self.name)
 
 class DestinationServiceRaw(db.Model):
 	__table_args__ = {'sqlite_autoincrement': True}
@@ -241,6 +261,7 @@ def ds():
 		# row['tour_operations'] = json.loads(row['tour_operations'])
 		entry = row2dict(DestinationService.__table__, row)
 		entry['tour_operations'] = json.loads(entry['tour_operations'])
+		entry['policy'] = json.loads(entry['policy'])
 		# data.append(row2dict(DestinationService.__table__, row))
 		data.append(entry)
 	res = {}
