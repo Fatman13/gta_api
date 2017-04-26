@@ -1,6 +1,11 @@
 #!/usr/bin/env python
 # coding=utf-8
 
+import sys
+if sys.version_info.major == 2:
+	reload(sys)
+	sys.setdefaultencoding('utf-8')
+
 import pprint
 import click 
 import requests
@@ -36,11 +41,13 @@ def updateds(country, client):
 	services = []
 	services_i = []
 	services_p = []
+	# sp_tree = ET.parse(os.path.join(os.getcwd(), 'SearchSightseeingPriceRequest.xml'))
+	sp_tree = ET.parse(os.path.join(os.path.dirname(os.path.abspath(__file__)), 'SearchSightseeingPriceRequest.xml'))
+	# si_tree = ET.parse(os.path.join(os.getcwd(), 'SearchItemInformationRequest.xml'))
+	si_tree = ET.parse(os.path.join(os.path.dirname(os.path.abspath(__file__)), 'SearchItemInformationRequest.xml'))
 
-	sp_tree = ET.parse(os.path.join(os.getcwd(), 'SearchSightseeingPriceRequest.xml'))
-	si_tree = ET.parse(os.path.join(os.getcwd(), 'SearchItemInformationRequest.xml'))
-
-	engine = create_engine('sqlite:///destServ.db')
+	# engine = create_engine('sqlite:///destServ.db')
+	engine = create_engine('sqlite:///' + os.path.join(os.path.dirname(os.path.abspath(__file__)), 'destServ.db'))
 	services_raw = engine.execute("SELECT * FROM destination_service_raw WHERE country='{0}';".format(country))
 
 	n_d = datetime.datetime.now().date()
@@ -72,13 +79,14 @@ def updateds(country, client):
 			entry['rate_plan'] = []
 			services.append(entry)
 
-		if row['pax_type'] == 'Adult':
-			entry['adult_min_pax'].add(int(row['min_pax']))
-		elif row['pax_type'] == 'Child':
+		min_pax = int(row['min_pax'])
+		if row['pax_type'] == 'Adult' and min_pax <= 9:
+			entry['adult_min_pax'].add(min_pax)
+		elif row['pax_type'] == 'Child' and min_pax <= 9:
 			child = {}
 			child['age_from'] = row['age_from']
 			child['age_to'] = row['age_to']
-			child['min_pax'] = int(row['min_pax'])
+			child['min_pax'] = min_pax
 
 			if child in entry['child_min_pax'] or int(row['age_to']) < 2:
 				last_city_code = row['city_code']
@@ -119,9 +127,15 @@ def updateds(country, client):
 				pprint.pprint(errors)
 				break
 
+		if ri_tree.find('.//ItemDetails') == None:
+			pprint.pprint('Error: ItemDetails not found?...{0}'.format(service['city_code'] + '_' + service['item_code']))
+			continue
+
 		if not len(list(ri_tree.find('.//ItemDetails'))):
 			pprint.pprint('No item information returned...')
-			continue
+			# update obsolete destination services
+			service['adult_min_pax'] = set()
+			service['child_min_pax'] = []
 
 		if ri_tree.find('.//Item') != None:
 			service['name'] = ri_tree.find('.//Item').text
@@ -195,8 +209,13 @@ def updateds(country, client):
 					service['closed_dates'].append(date.text)
 		if ri_tree.find('.//ThumbNail') != None:
 			service['thumb_nail'] = ri_tree.find('.//ThumbNail').text
+		else:
+			service['thumb_nail'] = ''
+
 		if ri_tree.find('.//Image') != None:
 			service['image'] = ri_tree.find('.//Image').text
+		else:
+			service['image'] = ''
 
 		# pprint.pprint(service)
 		services_i.append(service)
@@ -237,6 +256,7 @@ def updateds(country, client):
 				sp_tree.find('.//NumberOfAdults').text = str(min_pax)
 
 				# pprint.pprint('33333333333333333333333333333333333')
+				# pprint.pprint(service)
 				# pprint.pprint(ET.tostring(sp_tree.getroot(), encoding='UTF-8', method='xml'))
 
 				try:
@@ -246,6 +266,8 @@ def updateds(country, client):
 					continue
 
 				rp_tree = ET.fromstring(rp.text)
+
+				# pprint.pprint(rp.text)
 
 				if not len(list(rp_tree.find('.//SightseeingDetails'))):
 					pprint.pprint('No sightseeing price returned...')
@@ -316,27 +338,38 @@ def updateds(country, client):
 					# GTA API doesn't accept child under age 2...
 					sp_tree.find('.//Children').append(fromstring('<Age>{0}</Age>'.format(str(child_from_age+1))))
 
+				# pprint.pprint(service)
+				# pprint.pprint(ET.tostring(sp_tree.getroot(), encoding='UTF-8', method='xml'))
+
 				try:
 					rp = requests.post(url, data=ET.tostring(sp_tree.getroot(), encoding='UTF-8', method='xml'), timeout=600)
 				except OSError:
 					pprint.pprint('Error: ignoring OSError...')
 					continue
 
+				# pprint.pprint(rp.text)
+
 				rp_tree = ET.fromstring(rp.text)
 
+				# pprint.pprint(ET.tostring(rp_tree.getroot(), encoding='UTF-8', method='xml'))
+
 				if not len(list(rp_tree.find('.//SightseeingDetails'))):
-					pprint.pprint('No sightseeing price returned...')
+					pprint.pprint('No child sightseeing price returned...')
 					continue
 
 				tour_ops = rp_tree.find('.//TourOperations')
 
+				if tour_ops == None:
+					pprint.pprint('No Child tour ops returned...')
+					continue
+
 				if len(list(tour_ops)) == 1:
 					for t_op in service['tour_operations']:
-						if t_op['min_pax'] == child['min_pax'] and t_op['pax_type'] == 'Adult'and rate_plan['from_date'] == t_op['from_date']:
+						if t_op['min_pax'] == child['min_pax'] and t_op['pax_type'] == 'Adult'and rate_plan['from_date'] == t_op['from_date'] and rate_plan['to_date'] == t_op['to_date']:
 							tour_operation['price'] = float(rp_tree.find('.//ItemPrice').text) - float(t_op['price'])
 				else:
 					for t_op in service['tour_operations']:
-						if t_op['min_pax'] == child['min_pax'] and t_op['pax_type'] == 'Adult' and rate_plan['from_date'] == t_op['from_date']:
+						if t_op['min_pax'] == child['min_pax'] and t_op['pax_type'] == 'Adult' and rate_plan['from_date'] == t_op['from_date'] and rate_plan['to_date'] == t_op['to_date']:
 							tour_operation['prices'] = []			
 						
 							for tour_op in tour_ops:
@@ -362,7 +395,7 @@ def updateds(country, client):
 				service['tour_operations'].append(tour_operation)
 
 
-		pprint.pprint(service)
+		# pprint.pprint(service)
 		services_p.append(service)
 
 	columns = 'country, city_code, item_code, name, duration, summary, please_note, includes, the_tour, additional_information, currency, policy, tour_operations'

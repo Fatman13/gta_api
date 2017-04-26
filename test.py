@@ -2,33 +2,28 @@
 # coding=utf-8
 
 import pprint
-import csv
 import click 
+import requests
 import datetime as datetime
+from datetime import date
 from xml.etree import ElementTree as ET
+from xml.etree.ElementTree import fromstring
 import os
+import random
 from sqlalchemy import create_engine
+from sqlalchemy import text
+import copy
+import json
 
-@click.command()
-@click.option('--file_name', default='Canada.csv')
-def importds(file_name):
+url = 'https://rbs.gta-travel.com/rbscnapi/RequestListenerServlet'
 
-	columns = 'country, country_code, city, city_code, currency, item_name, item_code, description, duration, language, dates_from, dates_to, days, min_pax, please_note, conditions, additional_info, pax_type, price, age_from, age_to, commision'
+si_tree = ET.parse(os.path.join(os.getcwd(), 'SearchItemInformationRequest.xml'))
 
-	engine = create_engine('sqlite:///destServ.db')
+try:
+	ri = requests.post(url, data=ET.tostring(si_tree.getroot(), encoding='UTF-8', method='xml'), timeout=350)
+except OSError:
+	pprint.pprint('Error: ignoring OSError...')
 
-	country = os.path.splitext(os.path.basename(file_name))[0]
-	engine.execute("DELETE FROM destination_service_raw WHERE country='{0}';".format(country))
+ri_tree = ET.fromstring(ri.text)
 
-	with open(file_name, 'r') as csvfile:
-		tbl_reader = csv.reader(csvfile, delimiter=',')
-
-		for row in tbl_reader:
-			# engine.execute("INSERT INTO destination_service_raw ({0}) VALUES({1});".format(columns, ','.join( '\'' + ent.replace('\'', '\'\'') + '\'' for ent in row[0:22]) ))
-			entry = engine.execute("SELECT * FROM destination_service_raw WHERE city_code={0} AND item_code={1};".format('\'' + row[3] + '\'', '\'' + row[6] + '\'') )
-
-			pprint.pprint(entry)
-
-
-if __name__ == '__main__':
-	importds()
+pprint.pprint(ri.text)

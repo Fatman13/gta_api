@@ -22,7 +22,7 @@ def importds(file_name, client):
 
 	engine.execute("DELETE FROM {0};".format(client))
 
-	with open(file_name, 'r', encoding='utf-8') as csvfile:
+	with open(file_name, 'r', encoding='utf-8', errors='ignore') as csvfile:
 		tbl_reader = csv.reader(csvfile, delimiter='\t')
 
 		for i, row in enumerate(tbl_reader):
@@ -31,6 +31,9 @@ def importds(file_name, client):
 
 			if row[2] == '':
 				# pprint.pprint(row[2])
+				continue
+
+			if not '%' in row[21]:
 				continue
 			engine.execute("INSERT INTO {0} ({1}) VALUES({2});".format(client, columns, ','.join( '\'' + ent.replace('\'', '\'\'') + '\'' for ent in [row[index] for index in index_req[client]])))
 
