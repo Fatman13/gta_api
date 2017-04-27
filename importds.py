@@ -36,7 +36,7 @@ def importds(country):
 			elif len(row) == 21:
 				engine.execute("INSERT INTO destination_service_raw ({0}) VALUES({1});".format(columns21, ','.join( '\'' + ent.replace('\'', '\'\'') + '\'' for ent in row[0:21]) ))
 			else:
-				pprint.pprint('Error: Row number...' + str(len(row)))
+				pprint.pprint('Error: Wrong Column number...' + str(len(row)))
 
 
 

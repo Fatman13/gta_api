@@ -1,32 +1,41 @@
 import subprocess
 import pprint
+import os
+import logging
 
-subprocess.run(['python', 'updateds.py', '--country', 'Canada'])
-pprint.pprint('+ Done Updating prices of... Canada...')
+updateds_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'updateds.py')
 
-subprocess.run(['python', 'updateds.py', '--country', 'Austria'])
-pprint.pprint('+ Done Updating prices of... Austria...')
+# prod
+python_path = '/home/lengyu/.virtualenv/faskdeploy/bin/python'
+# test
+#python_path = 'python'
 
-subprocess.run(['python', 'updateds.py', '--country', 'Belgium'])
-pprint.pprint('+ Done Updating prices of... Belgium...')
+subprocess.call(['python', updateds_path, '--country', 'Canada'])
+logging.info('+ Done Updating prices of... Canada...')
 
-subprocess.run(['python', 'updateds.py', '--country', 'Germany'])
-pprint.pprint('+ Done Updating prices of... Germany...')
+subprocess.call(['python', updateds_path, '--country', 'Austria'])
+logging.info('+ Done Updating prices of... Austria...')
 
-subprocess.run(['python', 'updateds.py', '--country', 'United Kingdom'])
-pprint.pprint('+ Done Updating prices of... United Kingdom...')
+subprocess.call(['python', updateds_path, '--country', 'Belgium'])
+logging.info('+ Done Updating prices of... Belgium...')
 
-subprocess.run(['python', 'updateds.py', '--country', 'Spain'])
-pprint.pprint('+ Done Updating prices of... Spain...')
+subprocess.call(['python', updateds_path, '--country', 'Germany'])
+logging.info('+ Done Updating prices of... Germany...')
 
-subprocess.run(['python', 'updateds.py', '--country', 'Italy'])
-pprint.pprint('+ Done Updating prices of... Italy...')
+subprocess.call(['python', updateds_path, '--country', 'United Kingdom'])
+logging.info('+ Done Updating prices of... United Kingdom...')
 
-subprocess.run(['python', 'updateds.py', '--country', 'Greece'])
-pprint.pprint('+ Done Updating prices of... Greece...')
+subprocess.call(['python', updateds_path, '--country', 'Spain'])
+logging.info('+ Done Updating prices of... Spain...')
 
-subprocess.run(['python', 'updateds.py', '--country', 'Netherlands'])
-pprint.pprint('+ Done Updating prices of... Netherlands...')
+subprocess.call(['python', updateds_path, '--country', 'Italy'])
+logging.info('+ Done Updating prices of... Italy...')
 
-subprocess.run(['python', 'updateds.py', '--country', 'Portugal'])
-pprint.pprint('+ Done Updating prices of... Portugal...')
+subprocess.call(['python', updateds_path, '--country', 'Greece'])
+logging.info('+ Done Updating prices of... Greece...')
+
+subprocess.call(['python', updateds_path, '--country', 'Netherlands'])
+logging.info('+ Done Updating prices of... Netherlands...')
+
+subprocess.call(['python', updateds_path, '--country', 'Portugal'])
+logging.info('+ Done Updating prices of... Portugal...')
