@@ -175,8 +175,15 @@ def updateds(country, client):
 			op_ent['languages'] = []
 			if op.find('.//TourLanguages') != None:
 				for language in op.find('.//TourLanguages'):
-					if language.find('.//TourLanguage') != None:
-						op_ent['languages'].append(language.find('.//TourLanguage').text)
+					if language != None:
+						lang_ent = {}
+						lang_ent['language'] = language.text
+						lang_ent['code'] = language.get('Code')
+						lang_ent['list_code'] = ''
+						if language.get('LanguageListCode') != None:
+							lang_ent['list_code'] = language.get('LanguageListCode')
+						# op_ent['languages'].append(language.text)
+						op_ent['languages'].append(lang_ent)
 			op_ent['days'] = op.find('.//Frequency').text
 			op_ent['commentary'] = op.find('.//Commentary').text
 			op_ent['from_date'] = op.find('.//FromDate').text
@@ -267,6 +274,10 @@ def updateds(country, client):
 
 				rp_tree = ET.fromstring(rp.text)
 
+				if rp_tree.find('.//Errors') != None:
+					pprint.pprint('Some errors in Adults price...')
+					continue
+
 				# pprint.pprint(rp.text)
 
 				if not len(list(rp_tree.find('.//SightseeingDetails'))):
@@ -283,20 +294,20 @@ def updateds(country, client):
 							if conditoin.get('Charge') == 'true':
 								# service['policy'] += 'Charge(FromDay: ' + str(conditoin.get('FromDay')) + ' ToDay: ' + str(conditoin.get('ToDay')) + ') '
 								con_ent['type'] = 'Charge'
-								con_ent['charge_amount'] = conditoin.get('ChargeAmount')
-								con_ent['from_day'] = conditoin.get('FromDay')
-								con_ent['to_day'] = conditoin.get('ToDay')
+								con_ent['charge_amount'] = float(conditoin.get('ChargeAmount'))
+								con_ent['from_day'] = int(conditoin.get('FromDay'))
+								con_ent['to_day'] = int(conditoin.get('ToDay'))
 							else:
 								# service['policy'] += 'Free(FromDay: ' + str(conditoin.get('FromDay')) + ') '
 								con_ent['type'] = 'Free'
-								con_ent['from_day'] = conditoin.get('FromDay')
+								con_ent['from_day'] = int(conditoin.get('FromDay'))
 							service['policy'].append(con_ent)
 
 
 				tour_ops = rp_tree.find('.//TourOperations')
 
 				if len(list(tour_ops)) == 1:
-					tour_operation['price'] = rp_tree.find('.//ItemPrice').text
+					tour_operation['price'] = float(rp_tree.find('.//ItemPrice').text)
 				else:
 					tour_operation['prices'] = []			
 					for tour_op in tour_ops:
@@ -305,7 +316,7 @@ def updateds(country, client):
 							op_entry['name'] = tour_op.find('.//SpecialItem').text
 						else:
 							op_entry['name'] = tour_op.find('.//TourLanguage').text
-						op_entry['price'] = tour_op.find('.//ItemPrice').text
+						op_entry['price'] = float(tour_op.find('.//ItemPrice').text)
 						tour_operation['prices'].append(op_entry)
 				tour_operation['min_pax'] = min_pax
 				tour_operation['pax_type'] = 'Adult'
@@ -350,6 +361,10 @@ def updateds(country, client):
 				# pprint.pprint(rp.text)
 
 				rp_tree = ET.fromstring(rp.text)
+
+				if rp_tree.find('.//Errors') != None:
+					pprint.pprint('Some errors in Child price...')
+					continue
 
 				# pprint.pprint(ET.tostring(rp_tree.getroot(), encoding='UTF-8', method='xml'))
 
@@ -398,7 +413,7 @@ def updateds(country, client):
 		# pprint.pprint(service)
 		services_p.append(service)
 
-	columns = 'country, city_code, item_code, name, duration, summary, please_note, includes, the_tour, additional_information, currency, policy, tour_operations'
+	columns = 'country, city_code, item_code, name, duration, summary, please_note, includes, the_tour, additional_information, currency, policy, tour_operations, closed_dates, thumb_nail, image'
 
 	for service in services_p:
 		engine.execute("DELETE FROM destination_service WHERE city_code='{0}' AND item_code='{1}';".format(service['city_code'], service['item_code']))
@@ -407,7 +422,8 @@ def updateds(country, client):
 			r = [service['country'], service['city_code'], service['item_code'], \
 				service['name'], service['duration'], service['summary'], \
 				service['please_note'], service['includes'], service['the_tour'], service['additional_information'], \
-				service['currency'], json.dumps(service['policy']), json.dumps(service['tour_operations'])]
+				service['currency'], json.dumps(service['policy']), json.dumps(service['tour_operations']), \
+				json.dumps(service['closed_dates']), service['thumb_nail'], service['image']]
 				# with engine.connect() as connection:
 					# connection.execute(text("INSERT INTO destination_service ({0}) VALUES({1});".format(columns, ','.join( '\'' + ent.replace('\'', '\'\'') + '\'' for ent in r))).execution_options(autocommit=True) )
 					# connection.commit()

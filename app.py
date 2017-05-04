@@ -133,10 +133,16 @@ class DestinationService(db.Model):
 	policy = db.Column(db.String())
 	tour_operations = db.Column(db.String())
 
+	closed_dates = db.Column(db.String())
+	thumb_nail = db.Column(db.String())
+	image = db.Column(db.String())
+
+
 	def __init__(self, country, city_code, currency, name, item_code, duration, \
 					 please_note, \
 					 policy, \
-					 summary, includes, the_tour, additional_information, tour_operations):
+					 summary, includes, the_tour, additional_information, tour_operations,
+					 closed_dates, thumb_nail, image):
 		self.country = country
 		self.city_code = city_code
 		self.currency = currency
@@ -150,6 +156,9 @@ class DestinationService(db.Model):
 		self.the_tour = the_tour
 		self.additional_information = additional_information
 		self.tour_operations = tour_operations
+		self.closed_dates = closed_dates
+		self.thumb_nail = thumb_nail
+		self.image = image
 
 	def __repr__(self):
 		return "<DS id: {0} code: {1} name: {2}>".format(self.id, self.city_code + '_' + self.item_code, self.name)
@@ -262,6 +271,7 @@ def ds():
 		entry = row2dict(DestinationService.__table__, row)
 		entry['tour_operations'] = json.loads(entry['tour_operations'])
 		entry['policy'] = json.loads(entry['policy'])
+		entry['closed_dates'] = json.loads(entry['closed_dates'])
 		# data.append(row2dict(DestinationService.__table__, row))
 		data.append(entry)
 	res = {}

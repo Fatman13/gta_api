@@ -31,6 +31,9 @@ def importds(country):
 			if i < 11:
 				continue
 
+			# if not '%' in row[21]:
+				# continue
+
 			if len(row) == 22:
 				engine.execute("INSERT INTO destination_service_raw ({0}) VALUES({1});".format(columns22, ','.join( '\'' + ent.replace('\'', '\'\'') + '\'' for ent in row[0:22]) ))
 			elif len(row) == 21:

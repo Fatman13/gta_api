@@ -32,9 +32,6 @@ def importds(file_name, client):
 			if row[2] == '':
 				# pprint.pprint(row[2])
 				continue
-
-			if not '%' in row[21]:
-				continue
 			engine.execute("INSERT INTO {0} ({1}) VALUES({2});".format(client, columns, ','.join( '\'' + ent.replace('\'', '\'\'') + '\'' for ent in [row[index] for index in index_req[client]])))
 
 
