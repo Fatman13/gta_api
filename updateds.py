@@ -429,55 +429,5 @@ def updateds(country, client):
 					# connection.commit()
 			engine.execute("INSERT INTO destination_service ({0}) VALUES({1});".format(columns, ','.join( '\'' + ent.replace('\'', '\'\'') + '\'' for ent in r) ))
 
-	# for service in services_p:
-	# 	if len(service['tour_operations']) != 0:
-
-	# 		# entry = engine.execute("SELECT * FROM destination_service WHERE city_code='{0}' AND item_code='{1}';".format(service['city_code'], service['item_code']))
-
-	# 		# engine.execute("BEGIN TRANSACTION;")
-
-	# 		if entry != None:
-	# 			engine.execute("DELETE FROM destination_service WHERE city_code='{0}' AND item_code='{1}';".format(service['city_code'], service['item_code']))
-				
-	# 		r = [service['country'], service['city_code'], service['item_code'], \
-	# 			service['name'], service['duration'], service['summary'], \
-	# 			service['please_note'], service['includes'], service['more_info'], \
-	# 			service['currency'], json.dumps(service['policy']), json.dumps(service['tour_operations'])]
-	# 			# with engine.connect() as connection:
-	# 				# connection.execute(text("INSERT INTO destination_service ({0}) VALUES({1});".format(columns, ','.join( '\'' + ent.replace('\'', '\'\'') + '\'' for ent in r))).execution_options(autocommit=True) )
-	# 				# connection.commit()
-	# 		engine.execute("INSERT INTO destination_service ({0}) VALUES({1});".format(columns, ','.join( '\'' + ent.replace('\'', '\'\'') + '\'' for ent in r) ))
-
-	# 		# engine.execute("COMMIT;")
-
-
-			# engine.execute("BEGIN TRANSACTION;")
-
-			# if entry != None:
-			# 	updates = []
-			# 	for col_name in columns.split(', '):
-			# 		if col_name == 'tour_operations':
-			# 			updates.append(col_name + '=' + '\'' + json.dumps(service[col_name]) + '\'')
-			# 			continue
-			# 		updates.append(col_name + '=' + '\'' + service[col_name] + '\'')
-			# 		update_str = ', '.join(updates)
-			# 		# with engine.connect() as connection:
-			# 		# connection.execute(text("UPDATE destination_service SET {0} WHERE city_code={1} AND item_code={2};".format(update_str, \	
-			# 			# '\'' + service['city_code'] + '\'', '\'' + service['item_code'] + '\'')).execution_options(autocommit=True) )
-			# 		engine.execute(text("UPDATE destination_service SET {0} WHERE city_code={1} AND item_code={2};".format(update_str, \
-			# 			'\'' + service['city_code'] + '\'', '\'' + service['item_code'] + '\'')).execution_options(autocommit=True) )
-			# 		# connection.commit()
-			# else:
-			# 	r = [service['country'], service['city_code'], service['item_code'], \
-			# 		service['name'], service['duration'], service['summary'], \
-			# 		service['please_note'], service['includes'], service['more_info'], \
-			# 		service['currency'], json.dumps(service['policy']), json.dumps(service['tour_operations'])]
-			# 	# with engine.connect() as connection:
-			# 		# connection.execute(text("INSERT INTO destination_service ({0}) VALUES({1});".format(columns, ','.join( '\'' + ent.replace('\'', '\'\'') + '\'' for ent in r))).execution_options(autocommit=True) )
-			# 		# connection.commit()
-			# 	engine.execute("INSERT INTO destination_service ({0}) VALUES({1});".format(columns, ','.join( '\'' + ent.replace('\'', '\'\'') + '\'' for ent in r) ))
-
-			# engine.execute("COMMIT;")
-
 if __name__ == '__main__':
 	updateds()
