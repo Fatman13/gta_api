@@ -1,0 +1,1 @@
+0 4 * * * /home/lengyu/.virtualenvs/flaskdeploy/bin/python /home/lengyu/sites/gta/run_update_ds.py >> /home/lengyu/sites/gta/logs/crontab.log
