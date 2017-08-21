@@ -11,7 +11,7 @@ import os
 from sqlalchemy import create_engine
 
 @click.command()
-@click.option('--country', default='Canada')
+@click.option('--country', default='Germany')
 def importds(country):
 
 	pprint.pprint('Importing... Country: ' + country)
@@ -35,11 +35,12 @@ def importds(country):
 				# continue
 
 			if len(row) == 22:
+				# pprint.pprint(','.join( '\'' + ent.replace('\'', '\'\'') + '\'' for ent in row[0:22]))
 				engine.execute("INSERT INTO destination_service_raw ({0}) VALUES({1});".format(columns22, ','.join( '\'' + ent.replace('\'', '\'\'') + '\'' for ent in row[0:22]) ))
 			elif len(row) == 21:
 				engine.execute("INSERT INTO destination_service_raw ({0}) VALUES({1});".format(columns21, ','.join( '\'' + ent.replace('\'', '\'\'') + '\'' for ent in row[0:21]) ))
 			else:
-				pprint.pprint('Error: Wrong Column number...' + str(len(row)))
+				pprint.pprint('Error: Wrong Column number ' + str(len(row)) + ' at row ' + str(i))
 
 
 
