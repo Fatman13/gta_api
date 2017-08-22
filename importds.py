@@ -22,9 +22,9 @@ def importds(country):
 	engine = create_engine('sqlite:///destServ.db')
 
 	# country = os.path.splitext(os.path.basename(file_name))[0]
-	engine.execute("DELETE FROM destination_service_raw WHERE country='{0}';".format(country))
+	engine.execute("DELETE FROM destination_service_raw WHERE country_code='{0}';".format(country))
 
-	with open(glob.glob(country + '*.csv').pop(), 'r') as csvfile:
+	with open(glob.glob(country + '???.csv').pop(), 'r') as csvfile:
 		tbl_reader = csv.reader(csvfile, delimiter=',')
 
 		for i, row in enumerate(tbl_reader):

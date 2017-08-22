@@ -12,27 +12,28 @@ from sqlalchemy import create_engine
 index_req = {'ctrip': [2, 6, 7]}
 
 @click.command()
-@click.option('--file_name', default='ctrip_ds_prod_list.csv')
-@click.option('--client', default='ctrip')
-def importds(file_name, client):
+@click.option('--file_name', default='ds_req.csv')
+def importds(file_name):
 
-	columns = 'gta_code, city, country'
+	columns = 'city_code, item_code'
 
 	engine = create_engine('sqlite:///destServ.db')
 
-	engine.execute("DELETE FROM {0};".format(client))
+	engine.execute("DELETE FROM {0};".format('top_selling'))
 
 	with open(file_name, 'r', encoding='utf-8', errors='ignore') as csvfile:
-		tbl_reader = csv.reader(csvfile, delimiter='\t')
+		# tbl_reader = csv.reader(csvfile, delimiter='\t')
+		tbl_reader = csv.reader(csvfile)
 
 		for i, row in enumerate(tbl_reader):
 			if i == 0:
 				continue
 
-			if row[2] == '':
-				# pprint.pprint(row[2])
-				continue
-			engine.execute("INSERT INTO {0} ({1}) VALUES({2});".format(client, columns, ','.join( '\'' + ent.replace('\'', '\'\'') + '\'' for ent in [row[index] for index in index_req[client]])))
+			# if row[2] == '':
+			# 	# pprint.pprint(row[2])
+			# 	continue
+			# engine.execute("INSERT INTO {0} ({1}) VALUES({2});".format('top_selling', columns, ','.join( '\'' + ent.replace('\'', '\'\'') + '\'' for ent in [row[index] for index in index_req[client]])))
+			engine.execute("INSERT INTO {0} ({1}) VALUES({2});".format('top_selling', columns, ','.join( '\'' + ent.replace('\'', '\'\'') + '\'' for ent in row)))
 
 
 if __name__ == '__main__':

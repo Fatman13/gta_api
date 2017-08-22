@@ -19,6 +19,7 @@ from sqlalchemy import create_engine
 from sqlalchemy import text
 import copy
 import json
+# import random
 
 def validate_d(date_text):
 	try:
@@ -41,6 +42,8 @@ with open(os.path.join(os.path.dirname(os.path.abspath(__file__)), 'secrets.json
 	for client in cur_supported_clients:
 		cur_clients[client] = d_config[client]
 
+# ['D', 'IS', 'A', 'SF', 'I', 'EI', 'NL', 'CH', 'GB' ]
+
 @click.command()
 @click.option('--country', default='Germany')
 # @click.option('--client', default='ctrip')
@@ -59,7 +62,7 @@ def updateds(country):
 
 	# engine = create_engine('sqlite:///destServ.db')
 	engine = create_engine('sqlite:///' + os.path.join(os.path.dirname(os.path.abspath(__file__)), 'destServ.db'))
-	services_raw = engine.execute("SELECT * FROM destination_service_raw WHERE country='{0}';".format(country))
+	services_raw = engine.execute("SELECT * FROM destination_service_raw WHERE country_code='{0}';".format(country))
 
 	n_d = datetime.datetime.now().date()
 
@@ -68,9 +71,10 @@ def updateds(country):
 	entry = None
 
 	# reqs_rows = engine.execute("SELECT * FROM {0};".format(client))
-	# reqs = set()
-	# for row in reqs_rows:
-	# 	reqs.add(row['gta_code'])
+	reqs_rows = engine.execute("SELECT * FROM {0};".format('top_selling'))
+	reqs = set()
+	for row in reqs_rows:
+		reqs.add('_'.join([row['city_code'], row['item_code']]))
 
 	# Merge raw entries
 	for row in services_raw:
@@ -79,6 +83,10 @@ def updateds(country):
 		# if client == 'ctrip':
 		# 	if not ('#'.join([row['city_code'], row['item_code']]) in reqs):
 		# 		continue
+		gta_key = '_'.join([row['city_code'], row['item_code']])
+		if not gta_key in reqs:
+			# print('Not in top selling .. skipping .. ' + str(gta_key))
+			continue
 
 		if not (last_city_code == row['city_code'] and last_item_code == row['item_code']):
 			entry = {}
@@ -112,17 +120,21 @@ def updateds(country):
 		# pprint.pprint(entry)
 
 	# pprint.pprint(services)
+	print('Total services: ' + str(len(services)))
 
 	# Get item info
-	for service in services:
+	for counter, service in enumerate(services):
 		# a = 1
 		si_tree.find('.//ItemDestination').set('DestinationCode', service['city_code'])
 		si_tree.find('.//ItemCode').text = service['item_code']
 
 		# pprint.pprint(ET.tostring(si_tree.getroot(), encoding='UTF-8', method='xml'))
+		# if not counter % random.randint(23,25):
+			# print('Fetching static info.. ' + str(counter))
+		print('Fetching static info.. ' + str(counter) + ': ' + '_'.join([service['city_code'], service['item_code']]))
 
 		try:
-			ri = requests.post(url, data=ET.tostring(si_tree.getroot(), encoding='UTF-8', method='xml'), timeout=350)
+			ri = requests.post(url, data=ET.tostring(si_tree.getroot(), encoding='UTF-8', method='xml'), timeout=360)
 		except OSError:
 			pprint.pprint('Error: ignoring OSError...')
 			continue
@@ -174,51 +186,53 @@ def updateds(country):
 			service['please_note'] = ''
 		if ri_tree.find('.//AdditionalInformation') != None:
 			service['additional_information'] = ''
-			for info in ri_tree.find('.//AdditionalInformation'):
-				service['additional_information'] += info.text + ' '
+			if ri_tree.find('.//AdditionalInformation') != None:
+				for info in ri_tree.find('.//AdditionalInformation'):
+					service['additional_information'] += info.text + ' '
 			service['additional_information'].strip()
 
 		else:
 			service['additional_information'] = ''
 
-		for op in ri_tree.find('.//TourOperations'):
-			op_ent = {}
-			op_ent['languages'] = []
-			if op.find('.//TourLanguages') != None:
-				for language in op.find('.//TourLanguages'):
-					if language != None:
-						lang_ent = {}
-						lang_ent['language'] = language.text
-						lang_ent['code'] = language.get('Code')
-						lang_ent['list_code'] = ''
-						if language.get('LanguageListCode') != None:
-							lang_ent['list_code'] = language.get('LanguageListCode')
-						# op_ent['languages'].append(language.text)
-						op_ent['languages'].append(lang_ent)
-			op_ent['days'] = op.find('.//Frequency').text
-			op_ent['commentary'] = op.find('.//Commentary').text
-			op_ent['from_date'] = op.find('.//FromDate').text
-			op_ent['to_date'] = op.find('.//ToDate').text
+		if ri_tree.find('.//TourOperations') != None:
+			for op in ri_tree.find('.//TourOperations'):
+				op_ent = {}
+				op_ent['languages'] = []
+				if op.find('.//TourLanguages') != None:
+					for language in op.find('.//TourLanguages'):
+						if language != None:
+							lang_ent = {}
+							lang_ent['language'] = language.text
+							lang_ent['code'] = language.get('Code')
+							lang_ent['list_code'] = ''
+							if language.get('LanguageListCode') != None:
+								lang_ent['list_code'] = language.get('LanguageListCode')
+							# op_ent['languages'].append(language.text)
+							op_ent['languages'].append(lang_ent)
+				op_ent['days'] = op.find('.//Frequency').text
+				op_ent['commentary'] = op.find('.//Commentary').text
+				op_ent['from_date'] = op.find('.//FromDate').text
+				op_ent['to_date'] = op.find('.//ToDate').text
 
-			to_date = datetime.datetime.strptime(op_ent['to_date'], '%Y-%m-%d').date()
-			if to_date < n_d: 
-				pprint.pprint('To date is less than now date... skipping...')
-				continue
+				to_date = datetime.datetime.strptime(op_ent['to_date'], '%Y-%m-%d').date()
+				if to_date < n_d: 
+					pprint.pprint('To date is less than now date... skipping...')
+					continue
 
-			op_ent['departures'] = []
-			for dep in op.find('.//Departures'):
-				dep_ent = {}
-				if dep.find('.//Time') != None:
-					dep_ent['time'] = dep.find('.//Time').text
-				if dep.find('.//DeparturePoint') != None:
-					dep_ent['meeting_point'] = dep.find('.//DeparturePoint').text
-				if dep.find('.//Telephone') != None:
-					dep_ent['telephone'] = dep.find('.//Telephone').text
-				if dep.find('.//AddressLine1') != None:
-					dep_ent['address'] = str(dep.find('.//AddressLine1').text) + ' ' + str(dep.find('.//AddressLine2').text) 
-				op_ent['departures'].append(dep_ent)
+				op_ent['departures'] = []
+				for dep in op.find('.//Departures'):
+					dep_ent = {}
+					if dep.find('.//Time') != None:
+						dep_ent['time'] = dep.find('.//Time').text
+					if dep.find('.//DeparturePoint') != None:
+						dep_ent['meeting_point'] = dep.find('.//DeparturePoint').text
+					if dep.find('.//Telephone') != None:
+						dep_ent['telephone'] = dep.find('.//Telephone').text
+					if dep.find('.//AddressLine1') != None:
+						dep_ent['address'] = str(dep.find('.//AddressLine1').text) + ' ' + str(dep.find('.//AddressLine2').text) 
+					op_ent['departures'].append(dep_ent)
 
-			service['rate_plan'].append(op_ent)
+				service['rate_plan'].append(op_ent)
 
 		service['closed_dates'] = []
 		if ri_tree.find('.//ClosedDates') != None:
@@ -250,9 +264,10 @@ def updateds(country):
 
 	# pprint.pprint(services_i)
 	# pprint.pprint('///////////////////////////////////////////')
+	print('And total services i: ' + str(len(services_i)))
 
 	# Get price
-	for client in cur_supported_clients:
+	for counter_client, client in enumerate(cur_supported_clients):
 		sp_tree.find('.//RequestorID').set('Client', cur_clients[client]['id'])
 		sp_tree.find('.//RequestorID').set('EMailAddress', cur_clients[client]['email'])
 		sp_tree.find('.//RequestorID').set('Password', cur_clients[client]['password'])
@@ -260,7 +275,7 @@ def updateds(country):
 		mapped_tour_key = tour_mapping[client]
 		print('Now searching price for ' + client)		
 
-		for service in services_i:
+		for counter, service in enumerate(services_i):
 			sp_tree.find('.//ItemDestination').set('DestinationCode', service['city_code'])
 			sp_tree.find('.//ItemCode').text = service['item_code']
 
@@ -270,7 +285,7 @@ def updateds(country):
 			# multi price change
 			# service['tour_operations'] = []
 			service[mapped_tour_key] = []
-			print('Updating Adult price .. ' + service['city_code'] + '_' + service['item_code'])
+			print('Updating Adult price id: ' + str(counter) + ': ' + service['city_code'] + '_' + service['item_code'])
 
 			for min_pax in service['adult_min_pax']:
 				for rate_plan in service['rate_plan']:
@@ -305,6 +320,10 @@ def updateds(country):
 						continue
 
 					rp_tree = ET.fromstring(rp.text)
+
+					if rp_tree == None:
+						print('Error: Price search rp tree is none..')
+						continue
 
 					if rp_tree.find('.//Errors') != None:
 						pprint.pprint('Errors in returns of Adults price... on ' + search_d.strftime('%Y-%m-%d'))
@@ -449,9 +468,8 @@ def updateds(country):
 					# service['tour_operations'].append(tour_operation)
 					service[mapped_tour_key].append(tour_operation)
 
-
-			# pprint.pprint(service)
-			services_p.append(service)
+			if counter_client == 0:
+				services_p.append(service)
 
 	columns = 'country, city_code, item_code, name, duration, summary, please_note, includes, the_tour, additional_information, currency, policy, tour_operations, tour_operations1, tour_operations2, tour_operations3, tour_operations4, tour_operations5, tour_operations6, tour_operations7, closed_dates, thumb_nail, image'
 
@@ -467,6 +485,9 @@ def updateds(country):
 				# with engine.connect() as connection:
 					# connection.execute(text("INSERT INTO destination_service ({0}) VALUES({1});".format(columns, ','.join( '\'' + ent.replace('\'', '\'\'') + '\'' for ent in r))).execution_options(autocommit=True) )
 					# connection.commit()
+			if r == None:
+				print('Error: r is none when inserting into database..')
+				continue
 			engine.execute("INSERT INTO destination_service ({0}) VALUES({1});".format(columns, ','.join( '\'' + ent.replace('\'', '\'\'') + '\'' for ent in r) ))
 
 if __name__ == '__main__':

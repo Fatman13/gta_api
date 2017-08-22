@@ -52,22 +52,20 @@ def row2dict_p(tbl, row, mapped_tour_column):
 		d[column.name] = str(getattr(row, column.name))
 	return d
 
-class ctrip(db.Model):
+class topSelling(db.Model):
 	__table_args__ = {'sqlite_autoincrement': True}
 
 	id = db.Column(db.Integer, primary_key=True)
 
-	gta_code = db.Column(db.String())
-	city = db.Column(db.String())
-	country = db.Column(db.String())
+	city_code = db.Column(db.String())
+	item_code = db.Column(db.String())
 
-	def __init__(self, gta_code, city, country):
-		self.gta_code = gta_code
-		self.city = city
-		self.country = country
+	def __init__(self, city_code, item_code):
+		self.city_code = city_code
+		self.item_code = item_code
 
 	def __repr__(self):
-		return "<ctrip id: {0} gta_code: {1} country: {2}>".format(self.id, self.gta_code, self.country)
+		return "<ctrip id: {0} city_code: {1} item_code: {2}>".format(self.id, self.city_code, self.item_code)
 
 
 class DestinationService(db.Model):
@@ -222,7 +220,7 @@ def authorized(fn):
 @app.route('/destinationServices', methods=['GET'])
 @authorized
 def ds():
-	city_code, item_code, from_d, to_d = request.args.get('cityCode'), request.args.get('itemCode'), request.args.get('fromDate'), request.args.get('toDate')
+	city_code, item_code = request.args.get('cityCode'), request.args.get('itemCode')
 	# pprint.pprint(res)
 
 	q = db.session.query(DestinationService)
@@ -231,13 +229,11 @@ def ds():
 	if item_code != None:
 		q = q.filter(DestinationService.__table__.c.item_code == item_code)
 
-	client = app.config['AUTHORIZED_TOKENS'][request.headers.get('Api-Token')]
-	mapped_tour_column = app.config['TOUR_MAPPING'][client]
+	mapped_tour_column = app.config['TOUR_MAPPING'][app.config['AUTHORIZED_TOKENS'][request.headers.get('Api-Token')]]
 	# print(mapped_tour_column)
 
 	data = []
 	for row in q.all():
-		# entry = row2dict(DestinationService.__table__, row)
 		entry = row2dict_p(DestinationService.__table__, row, mapped_tour_column)
 		data.append(entry)
 	res = {}
