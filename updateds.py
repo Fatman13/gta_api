@@ -225,7 +225,12 @@ def updateds(country):
 					if dep.find('.//Time') != None:
 						dep_ent['time'] = dep.find('.//Time').text
 					if dep.find('.//DeparturePoint') != None:
-						dep_ent['meeting_point'] = dep.find('.//DeparturePoint').text
+						# dep_ent['meeting_point'] = dep.find('.//DeparturePoint').text
+						# fix name
+						departure_point = dep.find('.//DeparturePoint').text
+						departure_code = dep.find('.//DeparturePoint').get('Code')
+						dep_ent['departure_point'] = {"code": departure_code, "value": departure_point}
+
 					if dep.find('.//Telephone') != None:
 						dep_ent['telephone'] = dep.find('.//Telephone').text
 					if dep.find('.//AddressLine1') != None:
