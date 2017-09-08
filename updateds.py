@@ -20,6 +20,7 @@ from sqlalchemy import text
 import copy
 import json
 # import random
+from requests.exceptions import ConnectionError
 
 def validate_d(date_text):
 	try:
@@ -161,27 +162,27 @@ def updateds(country):
 			service['child_min_pax'] = []
 
 		if ri_tree.find('.//Item') != None:
-			service['name'] = ri_tree.find('.//Item').text
+			service['name'] = ri_tree.find('.//Item').text.replace('\n', ' ').replace('\r', '')
 		else:
 			service['name'] = ''
 		if ri_tree.find('.//TourSummary') != None:
-			service['summary'] = ri_tree.find('.//TourSummary').text
+			service['summary'] = ri_tree.find('.//TourSummary').text.replace('\n', ' ').replace('\r', '')
 		else:
 			service['summary'] = ''
 		if ri_tree.find('.//Duration') != None:
-			service['duration'] = ri_tree.find('.//Duration').text
+			service['duration'] = ri_tree.find('.//Duration').text.replace('\n', ' ').replace('\r', '')
 		else:
 			service['duration'] = ''
 		if ri_tree.find('.//TheTour') != None:
-			service['the_tour'] = ri_tree.find('.//TheTour').text
+			service['the_tour'] = ri_tree.find('.//TheTour').text.replace('\n', ' ').replace('\r', '')
 		else:
 			service['the_tour'] = ''
 		if ri_tree.find('.//Includes') != None:
-			service['includes'] = ri_tree.find('.//Includes').text
+			service['includes'] = ri_tree.find('.//Includes').text.replace('\n', ' ').replace('\r', '')
 		else:
 			service['includes'] = ''
 		if ri_tree.find('.//PleaseNote') != None:
-			service['please_note'] = ri_tree.find('.//PleaseNote').text
+			service['please_note'] = ri_tree.find('.//PleaseNote').text.replace('\n', ' ').replace('\r', '')
 		else:
 			service['please_note'] = ''
 		if ri_tree.find('.//AdditionalInformation') != None:
@@ -189,7 +190,7 @@ def updateds(country):
 			if ri_tree.find('.//AdditionalInformation') != None:
 				for info in ri_tree.find('.//AdditionalInformation'):
 					service['additional_information'] += info.text + ' '
-			service['additional_information'].strip()
+			service['additional_information'] = service['additional_information'].strip().replace('\n', ' ').replace('\r', '')
 
 		else:
 			service['additional_information'] = ''
@@ -323,7 +324,10 @@ def updateds(country):
 					except OSError:
 						pprint.pprint('Error: ignoring OSError...')
 						continue
-
+					except ConnectionError:
+						pprint.pprint('Fatal Error: Connection error... A')
+						continue
+							
 					rp_tree = ET.fromstring(rp.text)
 
 					if rp_tree == None:
@@ -417,6 +421,9 @@ def updateds(country):
 						rp = requests.post(url, data=ET.tostring(sp_tree.getroot(), encoding='UTF-8', method='xml'), timeout=600)
 					except OSError:
 						pprint.pprint('Error: ignoring OSError...')
+						continue
+					except ConnectionError:
+						pprint.pprint('Fatal Error: Connection error...')
 						continue
 
 					# pprint.pprint(rp.text)

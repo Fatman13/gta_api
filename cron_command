@@ -1,2 +1,6 @@
 0 4 * * * /home/lengyu/.virtualenvs/flaskdeploy/bin/python /home/lengyu/sites/gta/run_update_ds.py >> /home/lengyu/sites/gta/logs/crontab.log
 0 4 * * * /home/deploy/.deploy/bin/python /home/deploy/sites/gta/run_update_ds.py >> /home/deploy/sites/gta/logs/crontab.log
+
+C:\Users\809452\AppData\Local\Programs\Python\Python36-32\python.exe
+"C:\Users\809452\gta_swarm\ctripref.py"
+C:\Users\809452\gta_swarm
