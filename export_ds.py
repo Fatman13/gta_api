@@ -95,9 +95,11 @@ def export_ds(client):
 				ent['prices'] = try_get(op, 'prices')
 				ent['price'] = try_get(op, 'price')
 				ent['commentary'] = try_get(op, 'commentary')
+				ent['languages'] = try_get(op, 'languages')
 				# ent['departure_point'] = dep['departure_point']['value']
 				if try_get(dep, 'departure_point') != '':
 					ent['departure_point'] = dep['departure_point']['value']				
+					ent['departure_point_code'] = dep['departure_point']['code']				
 				ent['address'] = try_get(dep, 'address')
 				ent['time'] = try_get(dep, 'time')
 				ent['telephone'] = try_get(dep, 'telephone')
