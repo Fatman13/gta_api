@@ -49,3 +49,10 @@ subprocess.call(['python', updateds_path, '--country', 'EI'])
 subprocess.call(['python', updateds_path, '--country', 'NL'])
 subprocess.call(['python', updateds_path, '--country', 'CH'])
 subprocess.call(['python', updateds_path, '--country', 'GB'])
+
+# asia
+subprocess.call(['python', updateds_path, '--country', 'IA'])
+subprocess.call(['python', updateds_path, '--country', 'VI'])
+subprocess.call(['python', updateds_path, '--country', 'RS'])
+subprocess.call(['python', updateds_path, '--country', 'MA'])
+subprocess.call(['python', updateds_path, '--country', 'TH'])

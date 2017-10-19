@@ -46,7 +46,7 @@ with open(os.path.join(os.path.dirname(os.path.abspath(__file__)), 'secrets.json
 # ['D', 'IS', 'A', 'SF', 'I', 'EI', 'NL', 'CH', 'GB' ]
 
 @click.command()
-@click.option('--country', default='Germany')
+@click.option('--country', default='IA')
 # @click.option('--client', default='ctrip')
 def updateds(country):
 
@@ -63,7 +63,9 @@ def updateds(country):
 
 	# engine = create_engine('sqlite:///destServ.db')
 	engine = create_engine('sqlite:///' + os.path.join(os.path.dirname(os.path.abspath(__file__)), 'destServ.db'))
-	services_raw = engine.execute("SELECT * FROM destination_service_raw WHERE country_code='{0}';".format(country))
+	# 
+	# services_raw = engine.execute("SELECT * FROM destination_service_raw WHERE country_code='{0}';".format(country))
+	services_raw = engine.execute("SELECT * FROM destination_service_raw;".format(country))
 
 	n_d = datetime.datetime.now().date()
 

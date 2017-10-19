@@ -31,6 +31,7 @@ import pprint
 # subprocess.call(['python', 'importds.py', '--country', 'Portugal'])
 # pprint.pprint('Done importing Portugal...')
 
+# first bacth
 subprocess.call(['python', 'importds.py', '--country', 'D'])
 subprocess.call(['python', 'importds.py', '--country', 'IS'])
 subprocess.call(['python', 'importds.py', '--country', 'A'])
@@ -40,3 +41,10 @@ subprocess.call(['python', 'importds.py', '--country', 'EI'])
 subprocess.call(['python', 'importds.py', '--country', 'NL'])
 subprocess.call(['python', 'importds.py', '--country', 'CH'])
 subprocess.call(['python', 'importds.py', '--country', 'GB'])
+
+# asia 
+subprocess.call(['python', 'importds.py', '--country', 'IA'])
+subprocess.call(['python', 'importds.py', '--country', 'VI'])
+subprocess.call(['python', 'importds.py', '--country', 'RS'])
+subprocess.call(['python', 'importds.py', '--country', 'MA'])
+subprocess.call(['python', 'importds.py', '--country', 'TH'])
