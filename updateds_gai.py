@@ -13,6 +13,7 @@ import datetime as datetime
 from datetime import date
 from xml.etree import ElementTree as ET
 from xml.etree.ElementTree import fromstring
+from xml.etree.ElementTree import ParseError
 import os
 import random
 from sqlalchemy import create_engine
@@ -45,10 +46,13 @@ with open(os.path.join(os.path.dirname(os.path.abspath(__file__)), 'secrets.json
 
 # ['D', 'IS', 'A', 'SF', 'I', 'EI', 'NL', 'CH', 'GB' ]
 
+TIME_OUT = 10
+
 @click.command()
-@click.option('--country', default='IA')
+# @click.option('--country', default='IA')
+@click.option('--req/--no-req', default=True)
 # @click.option('--client', default='ctrip')
-def updateds(country):
+def updateds(req):
 
 	url = 'https://rbs.gta-travel.com/rbscnapi/RequestListenerServlet'
 	res = []
@@ -65,7 +69,7 @@ def updateds(country):
 	engine = create_engine('sqlite:///' + os.path.join(os.path.dirname(os.path.abspath(__file__)), 'destServ.db'))
 	# 
 	# services_raw = engine.execute("SELECT * FROM destination_service_raw WHERE country_code='{0}';".format(country))
-	services_raw = engine.execute("SELECT * FROM destination_service_raw;".format(country))
+	services_raw = engine.execute("SELECT * FROM destination_service_raw;")
 
 	n_d = datetime.datetime.now().date()
 
@@ -86,10 +90,11 @@ def updateds(country):
 		# if client == 'ctrip':
 		# 	if not ('#'.join([row['city_code'], row['item_code']]) in reqs):
 		# 		continue
-		gta_key = '_'.join([row['city_code'], row['item_code']])
-		if not gta_key in reqs:
-			# print('Not in top selling .. skipping .. ' + str(gta_key))
-			continue
+		if req:
+			gta_key = '_'.join([row['city_code'], row['item_code']])
+			if not gta_key in reqs:
+				# print('Not in top selling .. skipping .. ' + str(gta_key))
+				continue
 
 		if not (last_city_code == row['city_code'] and last_item_code == row['item_code']):
 			entry = {}
@@ -137,12 +142,16 @@ def updateds(country):
 		print('Fetching static info.. ' + str(counter) + ': ' + '_'.join([service['city_code'], service['item_code']]))
 
 		try:
-			ri = requests.post(url, data=ET.tostring(si_tree.getroot(), encoding='UTF-8', method='xml'), timeout=360)
+			ri = requests.post(url, data=ET.tostring(si_tree.getroot(), encoding='UTF-8', method='xml'), timeout=TIME_OUT)
 		except OSError:
 			pprint.pprint('Error: ignoring OSError...')
 			continue
 
-		ri_tree = ET.fromstring(ri.text)
+		try:
+			ri_tree = ET.fromstring(ri.text)
+		except ParseError:
+			print('Error: Parser error.. i')
+			continue
 
 		if ri_tree.find('.//Errors') != None:
 			if not len(list(ri_tree.find('.//Errors'))):
@@ -322,7 +331,8 @@ def updateds(country):
 					# pprint.pprint(ET.tostring(sp_tree.getroot(), encoding='UTF-8', method='xml'))
 
 					try:
-						rp = requests.post(url, data=ET.tostring(sp_tree.getroot(), encoding='UTF-8', method='xml'), timeout=600)
+						# rp = requests.post(url, data=ET.tostring(sp_tree.getroot(), encoding='UTF-8', method='xml'), timeout=10)
+						rp = requests.post(cur_clients[client]['url'], data=ET.tostring(sp_tree.getroot(), encoding='UTF-8', method='xml'), timeout=TIME_OUT)
 					except OSError:
 						pprint.pprint('Error: ignoring OSError...')
 						continue
@@ -342,7 +352,11 @@ def updateds(country):
 
 					# pprint.pprint(rp.text)
 
-					if rp_tree.find('.//SightseeingDetails') == None or not len(list(rp_tree.find('.//SightseeingDetails'))):
+					if rp_tree.find('.//SightseeingDetails') == None:
+						print('Warning: no sightseeing ele.. i')
+						continue
+
+					if not len(list(rp_tree.find('.//SightseeingDetails'))):
 						pprint.pprint('No sightseeing price returned...')
 						continue
 
@@ -420,7 +434,9 @@ def updateds(country):
 					# pprint.pprint(ET.tostring(sp_tree.getroot(), encoding='UTF-8', method='xml'))
 
 					try:
-						rp = requests.post(url, data=ET.tostring(sp_tree.getroot(), encoding='UTF-8', method='xml'), timeout=600)
+						# rp = requests.post(url, data=ET.tostring(sp_tree.getroot(), encoding='UTF-8', method='xml'), timeout=TIME_OUT)
+						rp = requests.post(cur_clients[client]['url'], data=ET.tostring(sp_tree.getroot(), encoding='UTF-8', method='xml'), timeout=TIME_OUT)
+						# cur_clients[client]['url']
 					except OSError:
 						pprint.pprint('Error: ignoring OSError...')
 						continue
@@ -437,6 +453,9 @@ def updateds(country):
 						continue
 
 					# pprint.pprint(ET.tostring(rp_tree.getroot(), encoding='UTF-8', method='xml'))
+
+					if rp_tree.find('.//SightseeingDetails') == None:
+						continue
 
 					if not len(list(rp_tree.find('.//SightseeingDetails'))):
 						pprint.pprint('No child sightseeing price returned...')
